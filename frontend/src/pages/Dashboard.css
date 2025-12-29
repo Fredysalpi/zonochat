@@ -1,0 +1,154 @@
+.dashboard-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background: #f9fafb;
+    overflow: hidden;
+}
+
+.dashboard-body {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+}
+
+.dashboard-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.dashboard-content {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 340px 1fr 300px;
+    gap: 0;
+    overflow: hidden;
+}
+
+/* Layout del Supervisor con 4 paneles */
+.dashboard-content.supervisor-layout {
+    grid-template-columns: 280px 320px 1fr 280px;
+    transition: grid-template-columns 0.3s ease;
+}
+
+/* Layout cuando el panel de contacto está oculto (Supervisor) */
+.dashboard-content.supervisor-layout.hide-contact-info {
+    grid-template-columns: 280px 320px 1fr;
+}
+
+/* Layout del Agente con 3 paneles (sin panel de supervisor) */
+.dashboard-content.agent-layout {
+    grid-template-columns: 340px 1fr 280px;
+    transition: grid-template-columns 0.3s ease;
+}
+
+/* Layout cuando el panel de contacto está oculto (Agente) */
+.dashboard-content.agent-layout.hide-contact-info {
+    grid-template-columns: 340px 1fr;
+}
+
+.supervisor-section {
+    background: white;
+    border-right: 1px solid #e5e7eb;
+    overflow: hidden;
+}
+
+.tickets-section {
+    background: white;
+    border-right: 1px solid #e5e7eb;
+    overflow: hidden;
+}
+
+.chat-section {
+    background: #f9fafb;
+    overflow: hidden;
+}
+
+.contact-info-section {
+    background: white;
+    border-left: 1px solid #e5e7eb;
+    overflow: hidden;
+}
+
+.no-ticket-selected {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.empty-state {
+    text-align: center;
+    color: #6b7280;
+}
+
+.empty-state svg {
+    color: #d1d5db;
+    margin-bottom: 16px;
+}
+
+.empty-state h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 8px;
+}
+
+.empty-state p {
+    font-size: 0.875rem;
+    color: #9ca3af;
+}
+
+.no-contact-info {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #9ca3af;
+    font-size: 0.875rem;
+}
+
+/* Responsive */
+@media (max-width: 1600px) {
+    .dashboard-content.supervisor-layout {
+        grid-template-columns: 260px 300px 1fr 260px;
+    }
+}
+
+@media (max-width: 1400px) {
+    .dashboard-content {
+        grid-template-columns: 300px 1fr 280px;
+    }
+
+    .dashboard-content.supervisor-layout {
+        grid-template-columns: 240px 280px 1fr 240px;
+    }
+}
+
+@media (max-width: 1024px) {
+    .dashboard-content {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+    }
+
+    .dashboard-content.supervisor-layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto 1fr;
+    }
+
+    .supervisor-section,
+    .tickets-section {
+        border-right: none;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .chat-section {
+        border-radius: 0;
+    }
+
+    .contact-info-section {
+        display: none;
+    }
+}

@@ -1,0 +1,48 @@
+🔍 Conectando a MySQL...
+✅ Conexión exitosa
+
+📋 Verificando usuarios actuales...
+Usuarios encontrados: 3
+
+  - admin@zonochat.com (admin)
+  - supervisor@zonochat.com (supervisor)
+  - agente1@zonochat.com (agent)
+
+🗑️  Eliminando usuarios existentes...
+✅ Usuarios eliminados
+
+🔐 Generando contraseñas hasheadas...
+✅ Contraseñas generadas
+
+👥 Creando nuevos usuarios...
+  ✅ Admin creado
+  ✅ Supervisor creado
+  ✅ Agente 1 creado
+
+📋 Verificando usuarios creados...
+Total de usuarios: 3
+
+  ID: 7 | admin@zonochat.com | Admin ZonoChat | admin
+  ID: 8 | supervisor@zonochat.com | Supervisor Demo | supervisor
+  ID: 9 | agente1@zonochat.com | Agente Uno | agent
+
+============================================================
+🎉 ¡USUARIOS CREADOS EXITOSAMENTE!
+============================================================
+
+📋 CREDENCIALES DE ACCESO:
+
+┌─────────────────────────────────────────────┐
+│ ADMINISTRADOR                               │
+│ Email: admin@zonochat.com                   │
+│ Password: admin123                          │
+├─────────────────────────────────────────────┤
+│ SUPERVISOR                                  │
+│ Email: supervisor@zonochat.com              │
+│ Password: supervisor123                     │
+├─────────────────────────────────────────────┤
+│ AGENTE 1                                    │
+│ Email: agente1@zonochat.com                 │
+│ Password: agente123                         │
+└─────────────────────────────────────────────┘
+

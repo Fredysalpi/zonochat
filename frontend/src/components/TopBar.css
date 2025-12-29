@@ -1,0 +1,266 @@
+.topbar {
+    height: 60px;
+    background: white;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    gap: 20px;
+    flex-shrink: 0;
+}
+
+.topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.menu-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: none;
+    background: #f3f4f6;
+    color: #374151;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.menu-btn:hover {
+    background: #e5e7eb;
+    color: #8b5cf6;
+}
+
+.app-branding {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.app-name {
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0;
+    line-height: 1;
+    background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.app-time {
+    font-size: 0.625rem;
+    color: #9ca3af;
+    font-weight: 500;
+    line-height: 1;
+}
+
+.topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.action-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: none;
+    background: #f3f4f6;
+    color: #6b7280;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.action-btn:hover {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+.notification-badge {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    background: #ef4444;
+    color: white;
+    border-radius: 8px;
+    font-size: 0.625rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.user-section {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    position: relative;
+}
+
+.user-avatar-simple {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.user-avatar-simple img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.avatar-placeholder-simple {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+    color: white;
+    font-weight: 700;
+    font-size: 0.75rem;
+}
+
+.user-info-simple {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.user-name-simple {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #111827;
+    line-height: 1.2;
+}
+
+.status-trigger {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    padding: 2px 6px 2px 2px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.status-trigger:hover {
+    background: #f3f4f6;
+}
+
+.status-dot-simple {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.status-text {
+    font-size: 0.75rem;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.chevron-icon {
+    color: #9ca3af;
+    transition: transform 0.2s ease;
+}
+
+.status-trigger:hover .chevron-icon {
+    color: #6b7280;
+}
+
+.status-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 8px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    min-width: 160px;
+    z-index: 1000;
+    overflow: hidden;
+    animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.status-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.8125rem;
+    color: #374151;
+}
+
+.status-option:hover {
+    background: #f9fafb;
+}
+
+.status-option.active {
+    background: #f0f4ff;
+    color: #8b5cf6;
+    font-weight: 600;
+}
+
+.status-dot-option {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+    .topbar {
+        padding: 0 12px;
+    }
+
+    .app-name {
+        font-size: 0.875rem;
+    }
+
+    .user-name-simple {
+        display: none;
+    }
+
+    .status-trigger {
+        display: none;
+    }
+}

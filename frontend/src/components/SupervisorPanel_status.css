@@ -1,0 +1,11 @@
+﻿.status-dot.available {
+    background: #10b981;
+}
+
+.status-dot.busy {
+    background: #f59e0b;
+}
+
+.status-dot.offline {
+    background: #6b7280;
+}
