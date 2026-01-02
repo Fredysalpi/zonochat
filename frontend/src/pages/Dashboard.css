@@ -33,9 +33,37 @@
     transition: grid-template-columns 0.3s ease;
 }
 
+/* Layout cuando el panel del supervisor está colapsado */
+.dashboard-content.supervisor-layout:has(.supervisor-panel.collapsed) {
+    grid-template-columns: 40px 320px 1fr 280px;
+}
+
+/* Layout cuando el panel de tickets está colapsado */
+.dashboard-content.supervisor-layout:has(.ticket-list.collapsed) {
+    grid-template-columns: 280px 40px 1fr 280px;
+}
+
+/* Layout cuando ambos paneles (supervisor y tickets) están colapsados */
+.dashboard-content.supervisor-layout:has(.supervisor-panel.collapsed):has(.ticket-list.collapsed) {
+    grid-template-columns: 40px 40px 1fr 280px;
+}
+
 /* Layout cuando el panel de contacto está oculto (Supervisor) */
 .dashboard-content.supervisor-layout.hide-contact-info {
     grid-template-columns: 280px 320px 1fr;
+}
+
+/* Layout cuando ambos están colapsados/ocultos */
+.dashboard-content.supervisor-layout.hide-contact-info:has(.supervisor-panel.collapsed) {
+    grid-template-columns: 40px 320px 1fr;
+}
+
+.dashboard-content.supervisor-layout.hide-contact-info:has(.ticket-list.collapsed) {
+    grid-template-columns: 280px 40px 1fr;
+}
+
+.dashboard-content.supervisor-layout.hide-contact-info:has(.supervisor-panel.collapsed):has(.ticket-list.collapsed) {
+    grid-template-columns: 40px 40px 1fr;
 }
 
 /* Layout del Agente con 3 paneles (sin panel de supervisor) */
@@ -44,21 +72,32 @@
     transition: grid-template-columns 0.3s ease;
 }
 
+/* Layout cuando el panel de tickets está colapsado (Agente) */
+.dashboard-content.agent-layout:has(.ticket-list.collapsed) {
+    grid-template-columns: 40px 1fr 280px;
+}
+
 /* Layout cuando el panel de contacto está oculto (Agente) */
 .dashboard-content.agent-layout.hide-contact-info {
     grid-template-columns: 340px 1fr;
+}
+
+.dashboard-content.agent-layout.hide-contact-info:has(.ticket-list.collapsed) {
+    grid-template-columns: 40px 1fr;
 }
 
 .supervisor-section {
     background: white;
     border-right: 1px solid #e5e7eb;
     overflow: hidden;
+    transition: all 0.3s ease;
 }
 
 .tickets-section {
     background: white;
     border-right: 1px solid #e5e7eb;
     overflow: hidden;
+    transition: all 0.3s ease;
 }
 
 .chat-section {

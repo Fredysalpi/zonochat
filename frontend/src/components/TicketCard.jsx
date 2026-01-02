@@ -74,7 +74,21 @@ function TicketCard({ ticket, isSelected, onClick, onAssign, showAssignButton = 
             <div className="ticket-card-content">
                 <div className="avatar-container">
                     <div className="contact-avatar">
-                        {ticket.contact_name?.[0] || '?'}
+                        {ticket.contact_avatar ? (
+                            <img
+                                src={ticket.contact_avatar}
+                                alt={ticket.contact_name}
+                                className="avatar-image"
+                                onError={(e) => {
+                                    // Si la imagen falla, mostrar inicial
+                                    e.target.style.display = 'none';
+                                    e.target.nextSibling.style.display = 'flex';
+                                }}
+                            />
+                        ) : null}
+                        <span className="avatar-initial" style={{ display: ticket.contact_avatar ? 'none' : 'flex' }}>
+                            {ticket.contact_name?.[0] || '?'}
+                        </span>
                     </div>
                     {ticket.unread_count > 0 && (
                         <div className="message-counter">

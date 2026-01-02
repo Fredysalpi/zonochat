@@ -52,7 +52,8 @@ router.post('/register',
                 {
                     id: user.id,
                     email: user.email,
-                    role: user.role
+                    role: user.role,
+                    tenant_id: user.tenant_id
                 },
                 process.env.JWT_SECRET,
                 { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
@@ -129,7 +130,8 @@ router.post('/login',
                 {
                     id: user.id,
                     email: user.email,
-                    role: user.role
+                    role: user.role,
+                    tenant_id: user.tenant_id
                 },
                 process.env.JWT_SECRET,
                 { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }

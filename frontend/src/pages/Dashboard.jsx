@@ -9,6 +9,9 @@ import TicketList from '../components/TicketList';
 import ChatView from '../components/ChatView';
 import ContactInfo from '../components/ContactInfo';
 import SettingsPanel from '../components/SettingsPanel';
+import TenantManagement from '../components/admin/TenantManagement';
+import AgentManagement from '../components/admin/AgentManagement';
+import ChannelSettings from '../components/admin/ChannelSettings';
 import { NotificationProvider } from '../components/NotificationSystem';
 import useNotificationSound from '../hooks/useNotificationSound';
 import './Dashboard.css';
@@ -154,6 +157,25 @@ function Dashboard() {
 
             newSocket.on('message:new', (message) => {
                 console.log('Nuevo mensaje:', message);
+
+                // Si el mensaje no es del usuario actual, incrementar contador de no leídos
+                if (message.sender_id !== user.id && message.sender_type !== 'agent') {
+                    setTickets(prev => prev.map(t =>
+                        t.id === message.ticket_id
+                            ? { ...t, unread_count: (t.unread_count || 0) + 1 }
+                            : t
+                    ));
+                }
+            });
+
+            // Resetear contador cuando se abre un ticket
+            newSocket.on('ticket:opened', (data) => {
+                console.log('Ticket abierto, reseteando contador:', data.ticketId);
+                setTickets(prev => prev.map(t =>
+                    t.id === data.ticketId
+                        ? { ...t, unread_count: 0 }
+                        : t
+                ));
             });
 
             setSocket(newSocket);
@@ -210,9 +232,17 @@ function Dashboard() {
                     />
 
                     <div className="dashboard-main">
-                        {activeView === 'settings' ? (
+                        {/* Vistas de Administración */}
+                        {activeView === 'tenants' ? (
+                            <TenantManagement />
+                        ) : activeView === 'agents' ? (
+                            <AgentManagement />
+                        ) : activeView === 'channels' ? (
+                            <ChannelSettings />
+                        ) : activeView === 'settings' ? (
                             <SettingsPanel user={user} />
                         ) : (
+                            /* Vista de Conversaciones */
                             <div className={`dashboard-content ${user.role === 'supervisor' || user.role === 'admin' ? 'supervisor-layout' : 'agent-layout'} ${!showContactInfo ? 'hide-contact-info' : ''}`}>
                                 {/* Panel del Supervisor - Solo para Supervisor y Admin */}
                                 {(user.role === 'supervisor' || user.role === 'admin') && (

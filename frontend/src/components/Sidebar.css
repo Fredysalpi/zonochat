@@ -102,6 +102,30 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
+/* Divider de secciones */
+.sidebar-divider {
+    margin: 16px 8px 8px 8px;
+    padding: 8px 4px 4px 4px;
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.sidebar-divider span {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.sidebar.collapsed .sidebar-divider span {
+    display: none;
+}
+
+.sidebar.collapsed .sidebar-divider {
+    margin: 12px 8px 8px 8px;
+    padding: 0;
+}
+
 /* Sidebar Footer */
 .sidebar-footer {
     padding: 12px 8px;

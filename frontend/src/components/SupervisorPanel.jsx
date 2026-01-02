@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Users, Clock, CheckCircle, XCircle, Search } from 'lucide-react';
+import { Users, Clock, CheckCircle, XCircle, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import api from '../services/api';
 import './SupervisorPanel.css';
 
 function SupervisorPanel({ onSelectAgent, socket }) {
+    const [isCollapsed, setIsCollapsed] = useState(false);
     const [stats, setStats] = useState({
         total: 0,
         active: 0,
@@ -111,9 +112,9 @@ function SupervisorPanel({ onSelectAgent, socket }) {
             const statsResponse = await api.get('/supervisor/agents/stats');
             setStats(statsResponse.data);
 
-            // Cargar tickets en holding
+            // Cargar canales en holding (agrupados)
             const holdingResponse = await api.get('/supervisor/holding');
-            setHoldingTickets(holdingResponse.data.tickets || []);
+            setHoldingTickets(holdingResponse.data.channels || []);
 
             // Cargar lista de agentes con sus métricas
             // El backend ya devuelve is_online correctamente
@@ -170,14 +171,38 @@ function SupervisorPanel({ onSelectAgent, socket }) {
     };
 
     const getChannelIcon = (channel) => {
-        const icons = {
-            whatsapp: '📱',
-            messenger: '💬',
-            instagram: '📷',
-            email: '📧',
-            web: '🌐'
+        const iconStyle = { width: '20px', height: '20px', objectFit: 'contain', display: 'inline-block' };
+        const channelLower = channel?.toLowerCase() || '';
+
+        switch (channelLower) {
+            case 'whatsapp':
+                return <img src="/img/whatsapp.png" alt="WhatsApp" style={iconStyle} />;
+            case 'messenger':
+                return <img src="/img/facebook.png" alt="Messenger" style={iconStyle} />;
+            case 'instagram':
+                return <img src="/img/instagram.png" alt="Instagram" style={iconStyle} />;
+            case 'telegram':
+                return <img src="/img/telegram.png" alt="Telegram" style={iconStyle} />;
+            case 'email':
+                return '📧';
+            case 'web':
+                return '🌐';
+            default:
+                return '💬';
+        }
+    };
+
+    const getChannelName = (channel) => {
+        const channelLower = channel?.toLowerCase() || '';
+        const names = {
+            'whatsapp': 'WhatsApp',
+            'messenger': 'Messenger',
+            'instagram': 'Instagram',
+            'telegram': 'Telegram',
+            'email': 'Email',
+            'web': 'Web'
         };
-        return icons[channel] || '💬';
+        return names[channelLower] || channel;
     };
 
     const formatTime = (date) => {
@@ -191,137 +216,172 @@ function SupervisorPanel({ onSelectAgent, socket }) {
     };
 
     return (
-        <div className="supervisor-panel">
-            {/* Header con estadísticas */}
-            <div className="supervisor-header">
-                <h2>Supervisor</h2>
-                <div className="supervisor-stats">
-                    <div
-                        className={`stat-item ${statusFilter === 'all' ? 'active-filter' : ''}`}
-                        onClick={() => handleStatClick('all')}
-                    >
-                        <Users size={16} />
-                        <span className="stat-value">{stats.total}</span>
-                        <span className="stat-label">Total</span>
-                    </div>
-                    <div
-                        className={`stat-item active ${statusFilter === 'active' ? 'active-filter' : ''}`}
-                        onClick={() => handleStatClick('active')}
-                    >
-                        <CheckCircle size={16} />
-                        <span className="stat-value">{stats.active}</span>
-                        <span className="stat-label">Activos</span>
-                    </div>
-                    <div
-                        className={`stat-item inactive ${statusFilter === 'inactive' ? 'active-filter' : ''}`}
-                        onClick={() => handleStatClick('inactive')}
-                    >
-                        <XCircle size={16} />
-                        <span className="stat-value">{stats.inactive}</span>
-                        <span className="stat-label">Inactivos</span>
-                    </div>
-                </div>
-            </div>
+        <div className={`supervisor-panel ${isCollapsed ? 'collapsed' : ''}`}>
+            {/* Botón de colapsar/expandir */}
+            <button
+                className="collapse-btn"
+                onClick={() => setIsCollapsed(!isCollapsed)}
+                title={isCollapsed ? 'Expandir panel' : 'Colapsar panel'}
+            >
+                {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+            </button>
 
-            {/* Sección de Holding */}
-            <div className="holding-section">
-                <div className="section-header">
-                    <Clock size={16} />
-                    <h3>Holding</h3>
-                    <span className="holding-count">{holdingTickets.length}</span>
-                </div>
-                <div className="holding-tickets">
-                    {holdingTickets.length === 0 ? (
-                        <div className="empty-holding">
-                            <p>No hay tickets en espera</p>
-                        </div>
-                    ) : (
-                        holdingTickets.map(ticket => (
-                            <div key={ticket.id} className="holding-ticket">
-                                <div className="holding-ticket-info">
-                                    <span className="channel-icon">{getChannelIcon(ticket.channel_type)}</span>
-                                    <span className="ticket-contact">{ticket.contact_name}</span>
-                                </div>
-                                <span className="holding-time">{formatTime(ticket.created_at)}</span>
+            {!isCollapsed && (
+                <>
+                    {/* Header con estadísticas */}
+                    <div className="supervisor-header">
+                        <h2>Supervisor</h2>
+                        <div className="supervisor-stats">
+                            <div
+                                className={`stat-item ${statusFilter === 'all' ? 'active-filter' : ''}`}
+                                onClick={() => handleStatClick('all')}
+                            >
+                                <Users size={16} />
+                                <span className="stat-value">{stats.total}</span>
+                                <span className="stat-label">Total</span>
                             </div>
-                        ))
-                    )}
-                </div>
-            </div>
-
-            {/* Lista de Agentes */}
-            <div className="agents-section">
-                <div className="section-header">
-                    <Users size={16} />
-                    <h3>Agentes</h3>
-                </div>
-
-                {/* Buscador de agentes */}
-                <div className="agent-search">
-                    <Search size={14} />
-                    <input
-                        type="text"
-                        placeholder="Buscar agente..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                </div>
-
-                {/* Botón Ver Todos */}
-                {selectedAgent && (
-                    <button
-                        className="show-all-btn"
-                        onClick={handleShowAll}
-                    >
-                        <Users size={14} />
-                        Ver todos los chats
-                    </button>
-                )}
-
-                <div className="agents-list">
-                    {filteredAgents.map(agent => (
-                        <div
-                            key={agent.id}
-                            className={`agent-card ${selectedAgent === agent.id ? 'selected' : ''}`}
-                            onClick={() => handleAgentClick(agent)}
-                        >
-                            <div className="agent-header">
-                                <div className="agent-avatar-container">
-                                    <div className="agent-avatar">
-                                        {agent.first_name?.[0] || '?'}
-                                    </div>
-                                    <span className={`status-dot ${!agent.is_online ? 'offline' :
-                                        agent.status === 'busy' ? 'busy' :
-                                            'available'
-                                        }`}></span>
-                                </div>
-                                <div className="agent-info">
-                                    <h4>{agent.first_name} {agent.last_name}</h4>
-                                    <div className="agent-channels">
-                                        {agent.channels && agent.channels.map(channel => (
-                                            <span key={channel} className="channel-badge">
-                                                {getChannelIcon(channel)}
-                                            </span>
-                                        ))}
-                                    </div>
-                                </div>
+                            <div
+                                className={`stat-item active ${statusFilter === 'active' ? 'active-filter' : ''}`}
+                                onClick={() => handleStatClick('active')}
+                            >
+                                <CheckCircle size={16} />
+                                <span className="stat-value">{stats.active}</span>
+                                <span className="stat-label">Activos</span>
                             </div>
-
-                            <div className="agent-metrics">
-                                <div className="metric-badge attention">
-                                    <span className="metric-text">En atención: {agent.available || 0}</span>
-                                </div>
-                                <div className="metric-badge pending">
-                                    <span className="metric-text">Pendiente: {agent.resolving || 0}</span>
-                                </div>
-                                <div className="metric-badge closed">
-                                    <span className="metric-text">Cerrados: {agent.resolved || 0}</span>
-                                </div>
+                            <div
+                                className={`stat-item inactive ${statusFilter === 'inactive' ? 'active-filter' : ''}`}
+                                onClick={() => handleStatClick('inactive')}
+                            >
+                                <XCircle size={16} />
+                                <span className="stat-value">{stats.inactive}</span>
+                                <span className="stat-label">Inactivos</span>
                             </div>
                         </div>
-                    ))}
-                </div>
-            </div>
+                    </div>
+
+                    {/* Sección de Holding */}
+                    <div className="holding-section">
+                        <div className="section-header">
+                            <Clock size={16} />
+                            <h3>Holding</h3>
+                            {holdingTickets.length > 0 && (
+                                <span className="holding-count">{holdingTickets.reduce((sum, ch) => sum + ch.ticket_count, 0)}</span>
+                            )}
+                        </div>
+                        <div className="holding-tickets">
+                            {holdingTickets.length === 0 ? (
+                                <div className="empty-holding">
+                                    <p>No hay tickets en espera</p>
+                                </div>
+                            ) : (
+                                holdingTickets.map(channel => (
+                                    <div key={channel.channel_id} className="holding-channel">
+                                        <div className="holding-channel-info">
+                                            <span className="channel-icon">{getChannelIcon(channel.channel_type)}</span>
+                                            <span className="channel-name-text">{channel.channel_name}</span>
+                                        </div>
+                                        <span className="channel-ticket-count">({channel.ticket_count})</span>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Lista de Agentes */}
+                    <div className="agents-section">
+                        <div className="section-header">
+                            <Users size={16} />
+                            <h3>Agentes</h3>
+                        </div>
+
+                        {/* Buscador de agentes */}
+                        <div className="agent-search">
+                            <Search size={14} />
+                            <input
+                                type="text"
+                                placeholder="Buscar agente..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+
+                        {/* Botón Ver Todos */}
+                        {selectedAgent && (
+                            <button
+                                className="show-all-btn"
+                                onClick={handleShowAll}
+                            >
+                                <Users size={14} />
+                                Ver todos los chats
+                            </button>
+                        )}
+
+                        <div className="agents-list">
+                            {filteredAgents.map(agent => (
+                                <div
+                                    key={agent.id}
+                                    className={`agent-card ${selectedAgent === agent.id ? 'selected' : ''}`}
+                                    onClick={() => handleAgentClick(agent)}
+                                >
+                                    <div className="agent-header">
+                                        <div className="agent-avatar-container">
+                                            <div className="agent-avatar">
+                                                {agent.first_name?.[0] || '?'}
+                                            </div>
+                                            <span className={`status-dot ${!agent.is_online ? 'offline' :
+                                                agent.status === 'busy' ? 'busy' :
+                                                    'available'
+                                                }`}></span>
+                                        </div>
+                                        <div className="agent-info">
+                                            <h4>{agent.first_name} {agent.last_name}</h4>
+                                            <div className="agent-channels">
+                                                {(() => {
+                                                    // Parsear assigned_channels si es string
+                                                    let channels = agent.assigned_channels;
+                                                    if (typeof channels === 'string') {
+                                                        try {
+                                                            channels = JSON.parse(channels);
+                                                        } catch (e) {
+                                                            channels = [];
+                                                        }
+                                                    }
+                                                    if (!Array.isArray(channels)) {
+                                                        channels = [];
+                                                    }
+
+                                                    return channels.length > 0 ? (
+                                                        channels.map(channel => (
+                                                            <span key={channel} className="channel-badge" title={getChannelName(channel)}>
+                                                                {getChannelIcon(channel)}
+                                                                <span className="channel-name">{getChannelName(channel)}</span>
+                                                            </span>
+                                                        ))
+                                                    ) : (
+                                                        <span className="no-channels">Sin canales</span>
+                                                    );
+                                                })()}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="agent-metrics">
+                                        <div className="metric-badge attention">
+                                            <span className="metric-text">En atención: {agent.available || 0}</span>
+                                        </div>
+                                        <div className="metric-badge pending">
+                                            <span className="metric-text">Pendiente: {agent.resolving || 0}</span>
+                                        </div>
+                                        <div className="metric-badge closed">
+                                            <span className="metric-text">Cerrados: {agent.resolved || 0}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </>
+            )}
         </div>
     );
 }

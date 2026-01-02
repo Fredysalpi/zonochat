@@ -4,39 +4,74 @@ const Contact = require('../../models/Contact');
 const Message = require('../../models/Message');
 
 /**
- * Verificar webhook de WhatsApp
+ * Obtener configuración de WhatsApp desde channel_configs
  */
-exports.verify = (req, res) => {
+async function getWhatsAppConfig() {
+    try {
+        const db = require('../../config/database');
+        const [configs] = await db.query(
+            "SELECT id, config, channel_id FROM channel_configs WHERE channel_type = 'whatsapp' AND is_active = true LIMIT 1"
+        );
+
+        if (configs.length > 0) {
+            const config = JSON.parse(configs[0].config);
+            console.log('✅ Usando configuración de WhatsApp desde BD');
+            return {
+                accessToken: config.access_token,
+                phoneNumberId: config.phone_number_id,
+                verifyToken: config.verify_token || process.env.WHATSAPP_VERIFY_TOKEN,
+                source: 'database',
+                configId: configs[0].id,
+                channelId: configs[0].channel_id
+            };
+        }
+    } catch (error) {
+        console.warn('⚠️  Error obteniendo config de WhatsApp desde BD:', error.message);
+    }
+
+    // Fallback a .env
+    console.log('📋 Usando configuración de WhatsApp desde .env');
+    return {
+        accessToken: process.env.WHATSAPP_ACCESS_TOKEN,
+        phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID,
+        verifyToken: process.env.WHATSAPP_VERIFY_TOKEN,
+        source: 'env'
+    };
+}
+
+/**
+ * Verificar webhook
+ */
+exports.verify = async (req, res) => {
     const mode = req.query['hub.mode'];
     const token = req.query['hub.verify_token'];
     const challenge = req.query['hub.challenge'];
 
     console.log('🔍 Verificando webhook de WhatsApp...');
-    console.log('Mode:', mode);
-    console.log('Token recibido:', token);
 
-    if (mode === 'subscribe' && token === process.env.WHATSAPP_VERIFY_TOKEN) {
-        console.log('✅ Webhook de WhatsApp verificado correctamente');
+    const config = await getWhatsAppConfig();
+
+    if (mode === 'subscribe' && token === config.verifyToken) {
+        console.log('✅ Webhook de WhatsApp verificado');
         res.status(200).send(challenge);
     } else {
-        console.error('❌ Verificación fallida');
+        console.error('❌ Verificación de webhook fallida');
         res.sendStatus(403);
     }
 };
 
 /**
- * Recibir mensajes de WhatsApp
+ * Recibir webhooks de WhatsApp
  */
-exports.receiveMessage = async (req, res) => {
+exports.webhook = async (req, res) => {
     try {
         const body = req.body;
 
-        console.log('📥 Webhook de WhatsApp recibido:', JSON.stringify(body, null, 2));
-
-        // Verificar que es de WhatsApp Business
         if (body.object !== 'whatsapp_business_account') {
             return res.sendStatus(404);
         }
+
+        console.log('📨 Webhook de WhatsApp recibido');
 
         // Procesar cada entrada
         for (const entry of body.entry) {
@@ -44,24 +79,21 @@ exports.receiveMessage = async (req, res) => {
                 if (change.field === 'messages') {
                     const value = change.value;
 
-                    // Procesar mensajes
                     if (value.messages) {
                         for (const message of value.messages) {
-                            await processIncomingMessage(message, value.metadata);
+                            await processIncomingMessage(message, value);
                         }
                     }
 
-                    // Procesar estados de mensajes (entregado, leído, etc.)
                     if (value.statuses) {
                         for (const status of value.statuses) {
-                            await processMessageStatus(status);
+                            await processStatus(status);
                         }
                     }
                 }
             }
         }
 
-        // Responder rápidamente a WhatsApp
         res.sendStatus(200);
     } catch (error) {
         console.error('❌ Error en webhook de WhatsApp:', error);
@@ -72,168 +104,188 @@ exports.receiveMessage = async (req, res) => {
 /**
  * Procesar mensaje entrante
  */
-async function processIncomingMessage(message, metadata) {
+async function processIncomingMessage(message, value) {
     try {
-        const from = message.from; // Número del usuario
+        const senderId = message.from;
         const messageId = message.id;
-        const timestamp = message.timestamp;
+        const messageType = message.type;
 
-        console.log('📨 Procesando mensaje de:', from);
+        console.log('📨 Procesando mensaje de WhatsApp:', senderId);
+
+        const db = require('../../config/database');
+
+        // Obtener canal activo
+        const [channels] = await db.query(
+            "SELECT id, channel_id, is_active FROM channel_configs WHERE channel_type = 'whatsapp' AND is_active = true LIMIT 1"
+        );
+
+        if (channels.length === 0) {
+            console.log('⚠️  No hay canal de WhatsApp activo');
+            return;
+        }
+
+        const channelId = channels[0].channel_id;
+        console.log('📡 Canal de WhatsApp encontrado y activo');
+
+        // Obtener información del contacto desde el webhook
+        const contactInfo = value.contacts?.[0] || {};
+        const userName = contactInfo.profile?.name || senderId;
+
+        // WhatsApp no proporciona avatar en el webhook, pero podemos usar la API
+        let userAvatar = null;
+        try {
+            const avatarInfo = await getUserAvatar(senderId);
+            userAvatar = avatarInfo?.url || null;
+        } catch (error) {
+            console.log('⚠️  No se pudo obtener avatar de WhatsApp');
+        }
 
         // Obtener o crear contacto
-        let contact = await Contact.findByPhone(from);
+        let contact = await Contact.findByExternalId(senderId, 'whatsapp');
         if (!contact) {
-            // Crear nuevo contacto
             contact = await Contact.create({
-                phone: from,
-                name: from, // Se actualizará con el nombre real si está disponible
-                channel: 'whatsapp'
+                external_id: senderId,
+                name: userName,
+                phone: senderId,
+                channel: 'whatsapp',
+                channel_id: channelId,
+                avatar: userAvatar
             });
             console.log('👤 Nuevo contacto creado:', contact.id);
+        } else {
+            // Actualizar avatar y nombre si cambió
+            if ((userAvatar && contact.avatar !== userAvatar) || contact.name !== userName) {
+                await Contact.update(contact.id, {
+                    avatar: userAvatar,
+                    name: userName
+                });
+                console.log('🖼️  Contacto actualizado');
+            }
         }
 
         // Obtener o crear ticket
         let ticket = await Ticket.findActiveByContact(contact.id);
         if (!ticket) {
-            // Crear nuevo ticket
             ticket = await Ticket.create({
                 contact_id: contact.id,
-                channel: 'whatsapp',
+                channel_id: channelId,
+                subject: `WhatsApp - ${userName}`,
                 status: 'open',
-                priority: 'medium',
-                subject: `Conversación de WhatsApp - ${contact.name}`
+                external_id: senderId
             });
             console.log('🎫 Nuevo ticket creado:', ticket.id);
 
-            // Emitir evento de nuevo ticket
             const io = global.io;
             if (io) {
                 io.emit('ticket:created', ticket);
             }
         }
 
-        // Determinar tipo de mensaje
-        let messageType = 'text';
+        // Procesar contenido del mensaje según el tipo
         let messageContent = '';
         let mediaUrl = null;
+        let finalMessageType = 'text';
 
-        if (message.text) {
-            messageType = 'text';
-            messageContent = message.text.body;
-        } else if (message.image) {
-            messageType = 'image';
-            messageContent = message.image.caption || 'Imagen';
-            mediaUrl = await downloadWhatsAppMedia(message.image.id);
-        } else if (message.video) {
-            messageType = 'video';
-            messageContent = message.video.caption || 'Video';
-            mediaUrl = await downloadWhatsAppMedia(message.video.id);
-        } else if (message.audio) {
-            messageType = 'audio';
-            messageContent = 'Audio';
-            mediaUrl = await downloadWhatsAppMedia(message.audio.id);
-        } else if (message.document) {
-            messageType = 'document';
-            messageContent = message.document.filename || 'Documento';
-            mediaUrl = await downloadWhatsAppMedia(message.document.id);
+        switch (messageType) {
+            case 'text':
+                messageContent = message.text.body;
+                finalMessageType = 'text';
+                break;
+            case 'image':
+                messageContent = 'Imagen';
+                mediaUrl = await downloadWhatsAppMedia(message.image.id);
+                finalMessageType = 'image';
+                break;
+            case 'video':
+                messageContent = 'Video';
+                mediaUrl = await downloadWhatsAppMedia(message.video.id);
+                finalMessageType = 'video';
+                break;
+            case 'audio':
+                messageContent = 'Audio';
+                mediaUrl = await downloadWhatsAppMedia(message.audio.id);
+                finalMessageType = 'audio';
+                break;
+            case 'document':
+                messageContent = message.document.filename || 'Documento';
+                mediaUrl = await downloadWhatsAppMedia(message.document.id);
+                finalMessageType = 'file';
+                break;
+            case 'location':
+                messageContent = `Ubicación: ${message.location.latitude}, ${message.location.longitude}`;
+                finalMessageType = 'text';
+                break;
+            default:
+                messageContent = `Mensaje de tipo: ${messageType}`;
+                finalMessageType = 'text';
         }
 
-        // Guardar mensaje en base de datos
+        // Guardar mensaje
         const savedMessage = await Message.create({
             ticket_id: ticket.id,
             content: messageContent,
             sender_type: 'contact',
-            message_type: messageType,
+            message_type: finalMessageType,
             media_url: mediaUrl,
             external_id: messageId
         });
 
         console.log('💾 Mensaje guardado:', savedMessage.id);
 
-        // Emitir mensaje por WebSocket
+        // Emitir por WebSocket
         const io = global.io;
         if (io) {
             io.to(`ticket:${ticket.id}`).emit('message:new', savedMessage);
+
+            // Obtener ticket actualizado
+            const [updatedTickets] = await db.query(
+                'SELECT * FROM v_tickets_full WHERE id = ?',
+                [ticket.id]
+            );
+
+            if (updatedTickets.length > 0) {
+                io.emit('ticket:updated', updatedTickets[0]);
+                console.log('📊 Ticket actualizado emitido');
+            }
         }
 
-        // Marcar mensaje como leído en WhatsApp
-        await markAsRead(messageId);
-
     } catch (error) {
-        console.error('❌ Error procesando mensaje:', error);
+        console.error('❌ Error procesando mensaje de WhatsApp:', error);
     }
 }
 
 /**
- * Procesar estado de mensaje (entregado, leído, etc.)
+ * Procesar estado del mensaje
  */
-async function processMessageStatus(status) {
+async function processStatus(status) {
     try {
-        const messageId = status.id;
-        const statusType = status.status; // sent, delivered, read, failed
-
-        console.log(`📊 Estado de mensaje ${messageId}: ${statusType}`);
-
-        // Actualizar estado en base de datos
-        if (statusType === 'read') {
-            await Message.updateByExternalId(messageId, { is_read: true });
-        }
+        console.log('📊 Estado del mensaje:', status.status);
+        // Aquí puedes actualizar el estado del mensaje en la BD
     } catch (error) {
-        console.error('❌ Error procesando estado:', error);
+        console.error('❌ Error procesando status:', error);
     }
 }
 
 /**
- * Enviar mensaje de WhatsApp
+ * Obtener avatar del usuario de WhatsApp
  */
-exports.sendMessage = async (to, message, type = 'text') => {
+async function getUserAvatar(phoneNumber) {
     try {
-        const url = `https://graph.facebook.com/v18.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`;
+        const config = await getWhatsAppConfig();
+        const url = `https://graph.facebook.com/v18.0/${config.phoneNumberId}/contacts`;
 
-        let data = {
-            messaging_product: 'whatsapp',
-            to: to,
-            type: type
-        };
-
-        if (type === 'text') {
-            data.text = { body: message };
-        }
-
-        const response = await axios.post(url, data, {
-            headers: {
-                'Authorization': `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}`,
-                'Content-Type': 'application/json'
+        const response = await axios.get(url, {
+            params: {
+                blocking: 'wait',
+                contacts: JSON.stringify([phoneNumber]),
+                access_token: config.accessToken
             }
         });
 
-        console.log('✅ Mensaje de WhatsApp enviado:', response.data);
-        return response.data;
+        return response.data.contacts?.[0]?.profile_picture || null;
     } catch (error) {
-        console.error('❌ Error enviando mensaje de WhatsApp:', error.response?.data || error.message);
-        throw error;
-    }
-};
-
-/**
- * Marcar mensaje como leído
- */
-async function markAsRead(messageId) {
-    try {
-        const url = `https://graph.facebook.com/v18.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`;
-
-        await axios.post(url, {
-            messaging_product: 'whatsapp',
-            status: 'read',
-            message_id: messageId
-        }, {
-            headers: {
-                'Authorization': `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}`,
-                'Content-Type': 'application/json'
-            }
-        });
-    } catch (error) {
-        console.error('❌ Error marcando como leído:', error.message);
+        console.error('❌ Error obteniendo avatar:', error.message);
+        return null;
     }
 }
 
@@ -242,22 +294,68 @@ async function markAsRead(messageId) {
  */
 async function downloadWhatsAppMedia(mediaId) {
     try {
+        const config = await getWhatsAppConfig();
+
         // Obtener URL del media
         const mediaUrl = `https://graph.facebook.com/v18.0/${mediaId}`;
         const response = await axios.get(mediaUrl, {
-            headers: {
-                'Authorization': `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}`
-            }
+            params: { access_token: config.accessToken }
         });
 
-        const downloadUrl = response.data.url;
-
-        // Descargar el archivo
-        // TODO: Implementar descarga y almacenamiento local
-        // Por ahora, retornar la URL temporal
-        return downloadUrl;
+        return response.data.url;
     } catch (error) {
         console.error('❌ Error descargando media:', error.message);
         return null;
     }
 }
+
+/**
+ * Enviar mensaje de WhatsApp
+ */
+exports.sendMessage = async (recipientId, message, imageUrl = null) => {
+    try {
+        const config = await getWhatsAppConfig();
+        const url = `https://graph.facebook.com/v18.0/${config.phoneNumberId}/messages`;
+
+        let messageData;
+
+        if (imageUrl) {
+            const fullImageUrl = imageUrl.startsWith('http')
+                ? imageUrl
+                : `${process.env.BACKEND_URL}${imageUrl}`;
+
+            messageData = {
+                messaging_product: 'whatsapp',
+                to: recipientId,
+                type: 'image',
+                image: {
+                    link: fullImageUrl
+                }
+            };
+        } else {
+            messageData = {
+                messaging_product: 'whatsapp',
+                to: recipientId,
+                type: 'text',
+                text: {
+                    body: message
+                }
+            };
+        }
+
+        const response = await axios.post(url, messageData, {
+            headers: {
+                'Authorization': `Bearer ${config.accessToken}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        console.log('✅ Mensaje enviado a WhatsApp');
+        return response.data;
+    } catch (error) {
+        console.error('❌ Error enviando mensaje a WhatsApp:', error.response?.data || error.message);
+        throw error;
+    }
+};
+
+module.exports = exports;

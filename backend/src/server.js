@@ -35,10 +35,11 @@ app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Servir archivos estáticos (uploads) con headers CORS
+// Servir archivos estáticos (uploads) con headers CORS permisivos para webhooks externos
 app.use('/uploads', (req, res, next) => {
-    res.header('Access-Control-Allow-Origin', process.env.FRONTEND_URL || 'http://localhost:5173');
+    res.header('Access-Control-Allow-Origin', '*');
     res.header('Cross-Origin-Resource-Policy', 'cross-origin');
+    res.header('Access-Control-Allow-Methods', 'GET');
     next();
 }, express.static(path.join(__dirname, '../uploads')));
 
@@ -75,10 +76,12 @@ io.on('connection', (socket) => {
     console.log('👤 Cliente conectado:', socket.id);
 
     // Unirse a sala de agente y registrar presencia
-    socket.on('agent:join', (agentId) => {
+    socket.on('agent:join', async (agentId) => {
         console.log('📥 ¡EVENTO AGENT:JOIN RECIBIDO! agentId:', agentId, 'tipo:', typeof agentId);
         socket.join(`agent:${agentId}`);
         socket.agentId = agentId;
+
+        const isFirstConnection = !connectedAgents.has(agentId);
 
         if (connectedAgents.has(agentId)) {
             connectedAgents.get(agentId).sockets.add(socket.id);
@@ -99,6 +102,16 @@ io.on('connection', (socket) => {
             connectedAt: data.connectedAt
         }));
         socket.emit('agents:online', onlineAgents);
+
+        // 🤖 ASIGNACIÓN AUTOMÁTICA: Solo cuando es la primera conexión
+        if (isFirstConnection) {
+            const { autoAssignTicketsToAgent } = require('./utils/autoAssign');
+            const result = await autoAssignTicketsToAgent(agentId, io);
+
+            if (result.assigned > 0) {
+                console.log(`🎯 ${result.assigned} ticket(s) asignado(s) automáticamente al agente ${agentId}`);
+            }
+        }
     });
 
     // Cambiar estado del agente
@@ -133,6 +146,15 @@ io.on('connection', (socket) => {
         console.log('🔄 Estado del ticket cambiado:', data);
         // Emitir a todos para actualizar el supervisor
         io.emit('ticket:updated', data.ticket);
+    });
+
+    // Ticket abierto por el agente (para limpiar notificaciones)
+    socket.on('ticket:opened', (data) => {
+        console.log('👁️ Ticket abierto por agente:', data.ticketId);
+        // Emitir solo al agente que abrió el ticket
+        if (socket.agentId) {
+            io.to(`agent:${socket.agentId}`).emit('ticket:opened', data);
+        }
     });
 
     // Desconexión
@@ -198,6 +220,10 @@ const supervisorRoutes = require('./routes/supervisor');
 const quickRepliesRoutes = require('./routes/quickReplies');
 const adminRoutes = require('./routes/admin');
 const webhooksRoutes = require('./routes/webhooks');
+// Multi-tenancy routes
+const tenantsRoutes = require('./routes/tenants');
+const channelConfigRoutes = require('./routes/channelConfig');
+const agentsRoutes = require('./routes/agents');
 // const channelsRoutes = require('./routes/channels'); // Temporalmente deshabilitado
 // const usersRoutes = require('./routes/users');
 
@@ -209,9 +235,12 @@ app.use('/api/supervisor', supervisorRoutes);
 app.use('/api/quick-replies', quickRepliesRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/webhooks', webhooksRoutes);
+// Multi-tenancy routes
+app.use('/api/tenants', tenantsRoutes);
+app.use('/api/channel-config', channelConfigRoutes);
+app.use('/api/agents', agentsRoutes);
 // app.use('/api/channels', channelsRoutes); // Temporalmente deshabilitado
 // app.use('/api/users', usersRoutes);
-// app.use('/api/channels', channelsRoutes);
 
 // Endpoint de debug para ver agentes conectados
 app.get('/api/debug/connected-agents', (req, res) => {

@@ -1,18 +1,33 @@
 import { Check, CheckCheck } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useState } from 'react';
+import ImageModal from './ImageModal';
 import './MessageBubble.css';
 
 function MessageBubble({ message, isOwn, currentUser }) {
+    const [showImageModal, setShowImageModal] = useState(false);
+    const [modalImageUrl, setModalImageUrl] = useState('');
+
     // Helper para construir URL de media correctamente
     const getMediaUrl = (mediaUrl) => {
         if (!mediaUrl) return '';
-        // Separar el path y el filename
+
+        // Si la URL ya es absoluta (empieza con http:// o https://), devolverla tal cual
+        if (mediaUrl.startsWith('http://') || mediaUrl.startsWith('https://')) {
+            return mediaUrl;
+        }
+
+        // Si es una URL relativa, construir la URL completa
         const parts = mediaUrl.split('/');
         const filename = parts[parts.length - 1];
         const path = parts.slice(0, -1).join('/');
-        // Codificar solo el filename
         return `http://localhost:3000${path}/${encodeURIComponent(filename)}`;
+    };
+
+    const handleImageClick = (imageUrl) => {
+        setModalImageUrl(imageUrl);
+        setShowImageModal(true);
     };
 
     // Debug: ver estructura del mensaje
@@ -92,6 +107,8 @@ function MessageBubble({ message, isOwn, currentUser }) {
                         <img
                             src={getMediaUrl(message.media_url)}
                             alt="Imagen"
+                            style={{ cursor: 'pointer' }}
+                            onClick={() => handleImageClick(getMediaUrl(message.media_url))}
                             onLoad={() => console.log('✅ Imagen cargada:', message.media_url)}
                             onError={(e) => {
                                 console.error('❌ Error al cargar imagen:', {
@@ -129,13 +146,26 @@ function MessageBubble({ message, isOwn, currentUser }) {
                 {isOwn && (
                     <span className="message-status">
                         {message.is_read ? (
-                            <CheckCheck size={14} className="read" />
+                            // 2 checks azules - Mensaje leído (solo funciona en producción)
+                            <CheckCheck size={14} className="status-read" />
+                        ) : message.external_message_id ? (
+                            // 2 checks grises - Mensaje entregado
+                            <CheckCheck size={14} className="status-delivered" />
                         ) : (
-                            <Check size={14} />
+                            // 1 check gris - Mensaje enviado
+                            <Check size={14} className="status-sent" />
                         )}
                     </span>
                 )}
             </div>
+
+            {/* Modal de imagen */}
+            {showImageModal && (
+                <ImageModal
+                    imageUrl={modalImageUrl}
+                    onClose={() => setShowImageModal(false)}
+                />
+            )}
         </div>
     );
 }

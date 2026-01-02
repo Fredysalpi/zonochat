@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Filter, Plus } from 'lucide-react';
+import { Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 import api from '../services/api';
 import TicketCard from './TicketCard';
 import AssignTicketModal from './AssignTicketModal';
@@ -11,6 +11,7 @@ function TicketList({ tickets, setTickets, selectedTicket, onSelectTicket, user,
     const [searchTerm, setSearchTerm] = useState('');
     const [showAssignModal, setShowAssignModal] = useState(false);
     const [ticketToAssign, setTicketToAssign] = useState(null);
+    const [isCollapsed, setIsCollapsed] = useState(false);
 
     useEffect(() => {
         loadTickets();
@@ -70,105 +71,115 @@ function TicketList({ tickets, setTickets, selectedTicket, onSelectTicket, user,
     const isSupervisorOrAdmin = user?.role === 'supervisor' || user?.role === 'admin';
 
     return (
-        <div className="ticket-list">
-            <div className="ticket-list-header">
-                <div className="ticket-list-header-info">
-                    <h2>{user?.first_name} {user?.last_name}</h2>
-                    <p>{user?.role === 'admin' ? 'Supervisor' : 'Agente'}</p>
-                </div>
-                <button className="btn-new-ticket" title="Nueva conversación">
-                    <Plus size={20} />
-                </button>
-            </div>
+        <div className={`ticket-list ${isCollapsed ? 'collapsed' : ''}`}>
+            {/* Botón de colapsar/expandir */}
+            <button
+                className="collapse-btn-tickets"
+                onClick={() => setIsCollapsed(!isCollapsed)}
+                title={isCollapsed ? 'Expandir panel' : 'Colapsar panel'}
+            >
+                {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+            </button>
 
-            <div className="search-bar">
-                <Search size={18} />
-                <input
-                    type="text"
-                    placeholder="Buscar conversaciones..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                />
-            </div>
-
-            <div className="filter-tabs">
-                <button
-                    className={filter === 'all' ? 'active' : ''}
-                    onClick={() => setFilter('all')}
-                >
-                    Todas
-                </button>
-                {isSupervisorOrAdmin && (
-                    <button
-                        className={filter === 'unassigned' ? 'active' : ''}
-                        onClick={() => setFilter('unassigned')}
-                    >
-                        Sin Asignar
-                    </button>
-                )}
-                <button
-                    className={filter === 'open' ? 'active' : ''}
-                    onClick={() => setFilter('open')}
-                >
-                    Abiertas
-                </button>
-                <button
-                    className={filter === 'pending' ? 'active' : ''}
-                    onClick={() => setFilter('pending')}
-                >
-                    Pendientes
-                </button>
-                {isSupervisorOrAdmin && (
-                    <button
-                        className={filter === 'resolved' ? 'active' : ''}
-                        onClick={() => setFilter('resolved')}
-                    >
-                        Resueltas
-                    </button>
-                )}
-                {!isSupervisorOrAdmin && (
-                    <button
-                        className={filter === 'closed' ? 'active' : ''}
-                        onClick={() => setFilter('closed')}
-                    >
-                        Cerradas
-                    </button>
-                )}
-            </div>
-
-            <div className="tickets-container">
-                {loading ? (
-                    <div className="loading-state">
-                        <div className="spinner"></div>
-                        <p>Cargando conversaciones...</p>
+            {!isCollapsed && (
+                <>
+                    <div className="ticket-list-header">
+                        <div className="ticket-list-header-info">
+                            <h2>{user?.first_name} {user?.last_name}</h2>
+                            <p>{user?.role === 'admin' ? 'Supervisor' : 'Agente'}</p>
+                        </div>
                     </div>
-                ) : filteredTickets.length === 0 ? (
-                    <div className="empty-state">
-                        <p>No hay conversaciones</p>
-                    </div>
-                ) : (
-                    filteredTickets.map(ticket => (
-                        <TicketCard
-                            key={ticket.id}
-                            ticket={ticket}
-                            isSelected={selectedTicket?.id === ticket.id}
-                            onClick={() => onSelectTicket(ticket)}
-                            onAssign={handleAssignClick}
-                            showAssignButton={isSupervisorOrAdmin}
+
+                    <div className="search-bar">
+                        <Search size={18} />
+                        <input
+                            type="text"
+                            placeholder="Buscar conversaciones..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
                         />
-                    ))
-                )}
-            </div>
+                    </div>
 
-            {showAssignModal && ticketToAssign && (
-                <AssignTicketModal
-                    ticket={ticketToAssign}
-                    onClose={() => {
-                        setShowAssignModal(false);
-                        setTicketToAssign(null);
-                    }}
-                    onAssign={handleAssignSuccess}
-                />
+                    <div className="filter-tabs">
+                        <button
+                            className={filter === 'all' ? 'active' : ''}
+                            onClick={() => setFilter('all')}
+                        >
+                            Todas
+                        </button>
+                        {isSupervisorOrAdmin && (
+                            <button
+                                className={filter === 'unassigned' ? 'active' : ''}
+                                onClick={() => setFilter('unassigned')}
+                            >
+                                Sin Asignar
+                            </button>
+                        )}
+                        <button
+                            className={filter === 'open' ? 'active' : ''}
+                            onClick={() => setFilter('open')}
+                        >
+                            Abiertas
+                        </button>
+                        <button
+                            className={filter === 'pending' ? 'active' : ''}
+                            onClick={() => setFilter('pending')}
+                        >
+                            Pendientes
+                        </button>
+                        {isSupervisorOrAdmin && (
+                            <button
+                                className={filter === 'resolved' ? 'active' : ''}
+                                onClick={() => setFilter('resolved')}
+                            >
+                                Resueltas
+                            </button>
+                        )}
+                        {!isSupervisorOrAdmin && (
+                            <button
+                                className={filter === 'closed' ? 'active' : ''}
+                                onClick={() => setFilter('closed')}
+                            >
+                                Cerradas
+                            </button>
+                        )}
+                    </div>
+
+                    <div className="tickets-container">
+                        {loading ? (
+                            <div className="loading-state">
+                                <div className="spinner"></div>
+                                <p>Cargando conversaciones...</p>
+                            </div>
+                        ) : filteredTickets.length === 0 ? (
+                            <div className="empty-state">
+                                <p>No hay conversaciones</p>
+                            </div>
+                        ) : (
+                            filteredTickets.map(ticket => (
+                                <TicketCard
+                                    key={ticket.id}
+                                    ticket={ticket}
+                                    isSelected={selectedTicket?.id === ticket.id}
+                                    onClick={() => onSelectTicket(ticket)}
+                                    onAssign={handleAssignClick}
+                                    showAssignButton={isSupervisorOrAdmin}
+                                />
+                            ))
+                        )}
+                    </div>
+
+                    {showAssignModal && ticketToAssign && (
+                        <AssignTicketModal
+                            ticket={ticketToAssign}
+                            onClose={() => {
+                                setShowAssignModal(false);
+                                setTicketToAssign(null);
+                            }}
+                            onAssign={handleAssignSuccess}
+                        />
+                    )}
+                </>
             )}
         </div>
     );

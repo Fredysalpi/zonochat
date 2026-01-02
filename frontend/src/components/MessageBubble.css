@@ -53,7 +53,7 @@
 }
 
 .message-bubble.other .message-content {
-    background: white;
+    background: #c2f9d2;
     color: #111827;
     border-bottom-left-radius: 3px;
 }
@@ -122,11 +122,22 @@
 }
 
 .message-status svg {
-    color: #8b5cf6;
+    color: #9ca3af;
 }
 
-.message-status svg.read {
-    color: #10b981;
+/* 1 check gris - Enviado */
+.message-status svg.status-sent {
+    color: #9ca3af;
+}
+
+/* 2 checks grises - Entregado */
+.message-status svg.status-delivered {
+    color: #9ca3af;
+}
+
+/* 2 checks azules - Leído */
+.message-status svg.status-read {
+    color: #3b82f6;
 }
 
 

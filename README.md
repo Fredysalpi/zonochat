@@ -1,59 +1,46 @@
-# 🚀 ZonoChat
+# 🚀 ZonoChat - Sistema Omnicanal de Atención al Cliente
 
-Sistema de chat omnicanal para gestión de conversaciones multi-agente, inspirado en Laraigo.
-
-## 📋 Descripción
-
-ZonoChat es una plataforma completa de gestión de conversaciones que permite a múltiples agentes atender clientes desde diferentes canales (Messenger, WhatsApp, Instagram) en una sola interfaz unificada.
+Sistema de atención al cliente multi-agente con soporte para múltiples canales de comunicación (Messenger, Instagram, WhatsApp, Telegram).
 
 ## ✨ Características
 
-### 🎯 Funcionalidades Principales
-- ✅ **Chat en tiempo real** con WebSockets
-- ✅ **Múltiples canales**: Messenger, WhatsApp, Instagram
-- ✅ **Sistema de tickets** con estados (Abierto, Pendiente, Cerrado)
-- ✅ **Panel de supervisor** con estadísticas en tiempo real
-- ✅ **Gestión de agentes** con estados (Disponible, Ocupado, Ausente)
-- ✅ **Reasignación de tickets** entre agentes
-- ✅ **Respuestas rápidas** predefinidas
-- ✅ **Notificaciones de sonido** automáticas
-- ✅ **Mensajes del sistema** para eventos importantes
-- ✅ **Soporte para archivos multimedia**
-
-### 👥 Roles de Usuario
-- **Admin**: Gestión completa del sistema
-- **Supervisor**: Monitoreo y reasignación de tickets
-- **Agente**: Atención de conversaciones
+- 💬 **Multi-Canal**: Messenger, Instagram, WhatsApp, Telegram
+- 👥 **Multi-Agente**: Gestión de múltiples agentes con asignación automática
+- 🎫 **Sistema de Tickets**: Gestión completa de conversaciones
+- 📊 **Panel de Supervisor**: Monitoreo en tiempo real
+- 🔔 **Notificaciones**: Contador de mensajes no leídos
+- 👤 **Avatares**: Visualización de fotos de perfil
+- ⚡ **Tiempo Real**: WebSocket para actualizaciones instantáneas
+- 🎨 **UI Moderna**: Interfaz inspirada en Laraigo
 
 ## 🛠️ Tecnologías
 
 ### Backend
 - Node.js + Express
 - MySQL
-- Socket.IO (WebSockets)
-- JWT (Autenticación)
-- Multer (Subida de archivos)
+- Socket.IO
+- JWT Authentication
+- Multer (uploads)
 
 ### Frontend
 - React + Vite
-- Lucide React (Iconos)
-- Axios
 - Socket.IO Client
+- Axios
+- CSS Moderno
 
-### Integraciones
-- Meta Cloud API (Messenger, WhatsApp, Instagram)
-- Webhooks para recepción de mensajes
+## 📋 Requisitos Previos
 
-## 📦 Instalación
-
-### Requisitos Previos
-- Node.js 18+ 
+- Node.js 16+
 - MySQL 8+
-- npm o yarn
+- Cuenta de Meta for Developers (para Messenger/Instagram/WhatsApp)
+- Bot de Telegram (opcional)
+
+## 🚀 Instalación
 
 ### 1. Clonar el repositorio
+
 ```bash
-git clone https://github.com/tu-usuario/zonochat.git
+git clone https://github.com/TU_USUARIO/zonochat.git
 cd zonochat
 ```
 
@@ -65,35 +52,42 @@ npm install
 ```
 
 Crear archivo `.env`:
+
 ```env
 # Base de datos
 DB_HOST=localhost
 DB_USER=root
 DB_PASSWORD=tu_password
-DB_NAME=zonochat_dev
-DB_PORT=3306
+DB_NAME=zonochat
 
 # JWT
-JWT_SECRET=tu_jwt_secret_muy_seguro
+JWT_SECRET=tu_secret_key_muy_segura
 
-# Servidor
-PORT=3000
-NODE_ENV=development
+# URLs
+BACKEND_URL=http://localhost:3000
 FRONTEND_URL=http://localhost:5173
 
 # Messenger (opcional)
 MESSENGER_PAGE_ACCESS_TOKEN=tu_token
-MESSENGER_VERIFY_TOKEN=tu_verify_token
+MESSENGER_VERIFY_TOKEN=zonochat_verify_2024
+
+# Instagram (opcional)
+INSTAGRAM_ACCESS_TOKEN=tu_token
+INSTAGRAM_VERIFY_TOKEN=zonochat_verify_2024
+
+# WhatsApp (opcional)
+WHATSAPP_ACCESS_TOKEN=tu_token
+WHATSAPP_PHONE_NUMBER_ID=tu_phone_id
+WHATSAPP_VERIFY_TOKEN=zonochat_verify_2024
+
+# Telegram (opcional)
+TELEGRAM_BOT_TOKEN=tu_bot_token
 ```
 
 Importar base de datos:
-```bash
-mysql -u root -p zonochat_dev < database/schema.sql
-```
 
-Iniciar backend:
 ```bash
-npm run dev
+mysql -u root -p < database/schema.sql
 ```
 
 ### 3. Configurar Frontend
@@ -104,159 +98,136 @@ npm install
 ```
 
 Crear archivo `.env`:
+
 ```env
 VITE_API_URL=http://localhost:3000
-VITE_SOCKET_URL=http://localhost:3000
+VITE_WS_URL=http://localhost:3000
 ```
 
-Iniciar frontend:
+### 4. Iniciar Aplicación
+
+Terminal 1 - Backend:
 ```bash
+cd backend
 npm run dev
 ```
 
-## 🚀 Uso
-
-### Acceso al Sistema
-
-1. Abre el navegador en `http://localhost:5173`
-2. Inicia sesión con las credenciales por defecto:
-   - **Admin**: admin@zonochat.com / admin123
-   - **Supervisor**: supervisor@zonochat.com / supervisor123
-   - **Agente**: agente@zonochat.com / agente123
-
-### Configurar Webhooks (Messenger)
-
-Para recibir mensajes de Messenger:
-
-1. **Instalar ngrok** (para desarrollo):
+Terminal 2 - Frontend:
 ```bash
-npm install -g ngrok
-ngrok http 3000
+cd frontend
+npm run dev
 ```
 
-2. **Configurar en Meta for Developers**:
-   - URL del webhook: `https://tu-url-ngrok.ngrok-free.app/api/webhooks/messenger`
-   - Verify Token: El que definiste en `.env`
-   - Suscribirse a: `messages`
+La aplicación estará disponible en:
+- Frontend: http://localhost:5173
+- Backend: http://localhost:3000
+
+## 📱 Configuración de Canales
+
+### Messenger
+
+1. Crea una app en [Meta for Developers](https://developers.facebook.com)
+2. Agrega el producto "Messenger"
+3. Configura el webhook:
+   - URL: `https://tu-dominio.com/api/webhooks/messenger`
+   - Verify Token: `zonochat_verify_2024`
+4. Suscribe tu página al webhook
+
+### Instagram
+
+1. En la misma app de Meta, agrega "Instagram"
+2. Conecta tu cuenta de Instagram Business
+3. Configura el webhook:
+   - URL: `https://tu-dominio.com/api/webhooks/instagram`
+   - Verify Token: `zonochat_verify_2024`
+4. Solicita permisos `instagram_manage_messages`
+
+### WhatsApp
+
+1. Agrega el producto "WhatsApp" a tu app
+2. Configura el webhook:
+   - URL: `https://tu-dominio.com/api/webhooks/whatsapp`
+   - Verify Token: `zonochat_verify_2024`
+3. Obtén el Phone Number ID y Access Token
+
+### Telegram
+
+1. Crea un bot con [@BotFather](https://t.me/BotFather)
+2. Obtén el Bot Token
+3. Configura el webhook automáticamente desde ZonoChat
 
 ## 📚 Documentación
 
-### Estructura del Proyecto
+- [Guía de Webhooks y Tokens](GUIA_WEBHOOKS_TOKENS.md)
+- [Sistema de Asignación Automática](ASIGNACION_AUTOMATICA.md)
+- [Configuración de Tokens](CONFIGURACION_TOKENS.md)
+- [Permisos de Instagram](INSTAGRAM_PERMISOS.md)
+
+## 🔐 Usuarios por Defecto
+
+```
+Admin:
+Email: admin@zonochat.com
+Password: admin123
+
+Agente:
+Email: agent@zonochat.com
+Password: agent123
+```
+
+**⚠️ IMPORTANTE**: Cambia estas contraseñas en producción.
+
+## 🏗️ Estructura del Proyecto
 
 ```
 zonochat/
 ├── backend/
 │   ├── src/
 │   │   ├── config/         # Configuración (DB, etc)
-│   │   ├── controllers/    # Lógica de negocio
-│   │   ├── middleware/     # Middlewares (auth, etc)
+│   │   ├── controllers/    # Controladores
+│   │   │   ├── webhooks/   # Webhooks de canales
+│   │   │   └── ...
 │   │   ├── models/         # Modelos de datos
 │   │   ├── routes/         # Rutas de API
-│   │   └── server.js       # Punto de entrada
-│   ├── database/
-│   │   ├── migrations/     # Migraciones SQL
-│   │   └── schema.sql      # Esquema completo
-│   └── uploads/            # Archivos subidos
+│   │   ├── middleware/     # Middleware (auth, etc)
+│   │   └── server.js       # Servidor principal
+│   ├── uploads/            # Archivos subidos
+│   └── package.json
 ├── frontend/
-│   ├── public/             # Archivos estáticos
-│   └── src/
-│       ├── components/     # Componentes React
-│       ├── hooks/          # Custom hooks
-│       ├── pages/          # Páginas principales
-│       ├── services/       # Servicios (API, etc)
-│       └── styles/         # Estilos CSS
-└── .agent/
-    └── workflows/          # Guías y documentación
+│   ├── src/
+│   │   ├── components/     # Componentes React
+│   │   ├── services/       # Servicios (API, WebSocket)
+│   │   ├── App.jsx         # Componente principal
+│   │   └── main.jsx        # Punto de entrada
+│   └── package.json
+├── database/
+│   └── schema.sql          # Esquema de BD
+└── README.md
 ```
-
-### API Endpoints
-
-#### Autenticación
-- `POST /api/auth/login` - Iniciar sesión
-- `POST /api/auth/register` - Registrar usuario
-- `GET /api/auth/me` - Obtener usuario actual
-
-#### Tickets
-- `GET /api/tickets` - Listar tickets
-- `GET /api/tickets/:id` - Obtener ticket
-- `POST /api/tickets` - Crear ticket
-- `PUT /api/tickets/:id` - Actualizar ticket
-- `PUT /api/tickets/:id/status` - Cambiar estado
-- `PUT /api/tickets/:id/assign` - Asignar agente
-
-#### Mensajes
-- `GET /api/messages/:ticketId` - Obtener mensajes
-- `POST /api/messages` - Enviar mensaje
-- `POST /api/messages/upload` - Subir archivo
-
-#### Supervisor
-- `GET /api/supervisor/agents/stats` - Estadísticas de agentes
-- `GET /api/supervisor/agents` - Lista de agentes
-- `GET /api/supervisor/holding` - Tickets en espera
-
-#### Webhooks
-- `GET /api/webhooks/messenger` - Verificación
-- `POST /api/webhooks/messenger` - Recibir mensajes
-
-### WebSocket Events
-
-#### Cliente → Servidor
-- `agent:status` - Cambiar estado del agente
-- `ticket:join` - Unirse a sala de ticket
-- `ticket:leave` - Salir de sala de ticket
-- `message:send` - Enviar mensaje
-- `ticket:status_changed` - Cambio de estado
-
-#### Servidor → Cliente
-- `ticket:created` - Nuevo ticket creado
-- `ticket:updated` - Ticket actualizado
-- `ticket:assigned` - Ticket asignado
-- `ticket:transferred_in` - Ticket recibido
-- `ticket:transferred_out` - Ticket transferido
-- `message:new` - Nuevo mensaje
-- `system:message` - Mensaje del sistema
-- `agent:online` - Agente conectado
-- `agent:offline` - Agente desconectado
-- `agent:status_changed` - Estado de agente cambiado
-
-## 🔐 Seguridad
-
-- ✅ Autenticación JWT
-- ✅ Contraseñas hasheadas con bcrypt
-- ✅ Variables de entorno para datos sensibles
-- ✅ Validación de tokens en webhooks
-- ✅ CORS configurado
-- ✅ Sanitización de inputs
-
-## 📝 Guías Adicionales
-
-En la carpeta `.agent/workflows/` encontrarás:
-- `deployment-production.md` - Guía completa de despliegue
-- `setup-messenger-solo.md` - Configuración de Messenger
-- `modulo-configuracion-canales.md` - Módulo de configuración
 
 ## 🤝 Contribuir
 
+Las contribuciones son bienvenidas. Por favor:
+
 1. Fork el proyecto
-2. Crea una rama (`git checkout -b feature/nueva-funcionalidad`)
-3. Commit tus cambios (`git commit -m 'Agregar nueva funcionalidad'`)
-4. Push a la rama (`git push origin feature/nueva-funcionalidad`)
+2. Crea una rama (`git checkout -b feature/AmazingFeature`)
+3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
+4. Push a la rama (`git push origin feature/AmazingFeature`)
 5. Abre un Pull Request
 
-## 📄 Licencia
+## 📝 Licencia
 
 Este proyecto está bajo la Licencia MIT.
 
 ## 👨‍💻 Autor
 
-Desarrollado por Fredy Salpiandroid
+**Fredy Salpiandroid**
 
 ## 🙏 Agradecimientos
 
 - Inspirado en Laraigo
-- Comunidad de React y Node.js
-- Meta for Developers
+- Construido con ❤️ para mejorar la atención al cliente
 
 ---
 
-**¿Necesitas ayuda?** Abre un issue en GitHub o consulta la documentación en `.agent/workflows/`
+**⭐ Si este proyecto te fue útil, dale una estrella en GitHub!**

@@ -29,6 +29,22 @@ exports.sendMessage = async (req, res) => {
         if (!ticketId) return res.status(400).json({ error: 'ticket_id es requerido' });
         if (!content && !req.file) return res.status(400).json({ error: 'content o archivo es requerido' });
 
+        // Obtener información del ticket y contacto
+        const [ticketRows] = await db.query(
+            `SELECT t.*, c.external_id, ch.type as channel_type 
+             FROM tickets t 
+             JOIN contacts c ON t.contact_id = c.id 
+             JOIN channels ch ON t.channel_id = ch.id 
+             WHERE t.id = ?`,
+            [ticketId]
+        );
+
+        if (ticketRows.length === 0) {
+            return res.status(404).json({ error: 'Ticket no encontrado' });
+        }
+
+        const ticket = ticketRows[0];
+
         let messageType = 'text';
         let mediaUrl = null;
         let mediaMimeType = null;
@@ -57,6 +73,39 @@ exports.sendMessage = async (req, res) => {
         );
 
         console.log('📤 Mensaje guardado:', messageRows[0]);
+
+        // Enviar mensaje a través del canal correspondiente
+        if (ticket.channel_type === 'messenger' && ticket.external_id) {
+            try {
+                const messengerController = require('./webhooks/messengerController');
+                let messengerResponse;
+
+                if (mediaUrl) {
+                    // Enviar imagen
+                    messengerResponse = await messengerController.sendMessage(ticket.external_id, content || 'Imagen', mediaUrl);
+                    console.log('✅ Imagen enviada a Messenger');
+                } else {
+                    // Enviar texto
+                    messengerResponse = await messengerController.sendMessage(ticket.external_id, content);
+                    console.log('✅ Mensaje enviado a Messenger');
+                }
+
+                // Guardar el message_id de Facebook en la base de datos
+                if (messengerResponse && messengerResponse.message_id) {
+                    await db.query(
+                        'UPDATE messages SET external_message_id = ? WHERE id = ?',
+                        [messengerResponse.message_id, result.insertId]
+                    );
+                    console.log('✅ external_message_id guardado:', messengerResponse.message_id);
+
+                    // Actualizar el mensaje en memoria para emitirlo con el external_message_id
+                    messageRows[0].external_message_id = messengerResponse.message_id;
+                }
+            } catch (error) {
+                console.error('❌ Error al enviar mensaje a Messenger:', error.message);
+                // No fallar la petición si el envío a Messenger falla
+            }
+        }
 
         await db.query('UPDATE tickets SET updated_at = NOW() WHERE id = ?', [ticketId]);
 
@@ -152,6 +201,73 @@ exports.receiveWebhook = async (req, res) => {
     } catch (error) {
         console.error('Error en webhook:', error);
         res.status(500).json({ error: 'Error al procesar webhook' });
+    }
+};
+
+/**
+ * Marcar un mensaje como leído
+ */
+exports.markAsRead = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        await db.query(
+            'UPDATE messages SET is_read = 1, read_at = NOW() WHERE id = ?',
+            [id]
+        );
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error al marcar mensaje como leído:', error);
+        res.status(500).json({ error: 'Error al marcar mensaje como leído' });
+    }
+};
+
+/**
+ * Marcar todos los mensajes de un ticket como leídos
+ */
+exports.markAllAsRead = async (req, res) => {
+    try {
+        const { ticketId } = req.params;
+
+        // Obtener información del ticket
+        const [tickets] = await db.query(
+            `SELECT t.*, c.external_id, ch.type as channel_type
+             FROM tickets t
+             JOIN contacts c ON t.contact_id = c.id
+             JOIN channels ch ON t.channel_id = ch.id
+             WHERE t.id = ?`,
+            [ticketId]
+        );
+
+        if (tickets.length === 0) {
+            return res.status(404).json({ error: 'Ticket no encontrado' });
+        }
+
+        const ticket = tickets[0];
+
+        // Marcar mensajes como leídos en la base de datos
+        await db.query(
+            'UPDATE messages SET is_read = 1, read_at = NOW() WHERE ticket_id = ? AND sender_type = ?',
+            [ticketId, 'contact']
+        );
+
+        // Si es Messenger, enviar confirmación de lectura a Facebook
+        if (ticket.channel_type === 'messenger' && ticket.external_id) {
+            try {
+                const messengerController = require('./webhooks/messengerController');
+                await messengerController.sendReadReceipt(ticket.external_id);
+                console.log('✅ Confirmación de lectura enviada a Messenger');
+            } catch (error) {
+                console.error('❌ Error al enviar confirmación de lectura a Messenger:', error.message);
+                // No fallar la petición si el envío a Messenger falla
+            }
+        }
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error al marcar mensajes como leídos:', error);
+        res.status(500).json({ error: 'Error al marcar mensajes como leídos' });
     }
 };
 

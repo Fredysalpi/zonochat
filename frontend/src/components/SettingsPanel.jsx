@@ -244,14 +244,23 @@ function AgentsTab({ agents, loading, onAdd, onEdit, onDelete, onRefresh }) {
 
 function ChannelsTab({ channels, loading, onAdd, onEdit, onDelete, onRefresh }) {
     const getChannelIcon = (type) => {
-        const icons = {
-            whatsapp: '💬',
-            messenger: '💬',
-            instagram: '📷',
-            telegram: '✈️',
-            email: '📧'
-        };
-        return icons[type] || '📱';
+        const iconStyle = { width: '20px', height: '20px', objectFit: 'contain', display: 'inline-block' };
+        const typeLower = type?.toLowerCase() || '';
+
+        switch (typeLower) {
+            case 'whatsapp':
+                return <img src="/img/whatsapp.png" alt="WhatsApp" style={iconStyle} />;
+            case 'messenger':
+                return <img src="/img/facebook.png" alt="Messenger" style={iconStyle} />;
+            case 'instagram':
+                return <img src="/img/instagram.png" alt="Instagram" style={iconStyle} />;
+            case 'telegram':
+                return '✈️';
+            case 'email':
+                return '📧';
+            default:
+                return '📱';
+        }
     };
 
     return (
@@ -449,15 +458,19 @@ function AgentModal({ agent, onClose, onSave }) {
 }
 
 function ChannelModal({ channel, onClose, onSave }) {
+    // Inicializar config según el tipo de canal
+    const getInitialConfig = () => {
+        if (channel?.config) {
+            return typeof channel.config === 'string' ? JSON.parse(channel.config) : channel.config;
+        }
+        // Config por defecto según tipo
+        return {};
+    };
+
     const [formData, setFormData] = useState({
         name: channel?.name || '',
-        type: channel?.type || 'whatsapp',
-        config: channel?.config ? JSON.parse(channel.config) : {
-            api_key: '',
-            api_secret: '',
-            phone_number: '',
-            webhook_url: ''
-        },
+        type: channel?.type || 'messenger',
+        config: getInitialConfig(),
         is_active: channel?.is_active !== undefined ? channel.is_active : true
     });
     const [saving, setSaving] = useState(false);
@@ -490,6 +503,182 @@ function ChannelModal({ channel, onClose, onSave }) {
         }
     };
 
+    const updateConfigField = (field, value) => {
+        setFormData({
+            ...formData,
+            config: { ...formData.config, [field]: value }
+        });
+    };
+
+    const getWebhookUrl = () => {
+        const baseUrl = window.location.origin.replace('5173', '3000');
+        return `${baseUrl}/api/webhooks/${formData.type}`;
+    };
+
+    const renderConfigFields = () => {
+        switch (formData.type) {
+            case 'messenger':
+                return (
+                    <>
+                        <div className="form-group">
+                            <label>Page Access Token *</label>
+                            <input
+                                type="password"
+                                value={formData.config.page_access_token || ''}
+                                onChange={(e) => updateConfigField('page_access_token', e.target.value)}
+                                placeholder="EAAxxxxxxxxxx"
+                                required
+                            />
+                            <small className="form-hint">
+                                Token de acceso de tu página de Facebook
+                            </small>
+                        </div>
+
+                        <div className="form-group">
+                            <label>Verify Token *</label>
+                            <input
+                                type="text"
+                                value={formData.config.verify_token || ''}
+                                onChange={(e) => updateConfigField('verify_token', e.target.value)}
+                                placeholder="tu_verify_token_secreto"
+                                required
+                            />
+                            <small className="form-hint">
+                                Token para verificar el webhook (debe coincidir con Meta for Developers)
+                            </small>
+                        </div>
+
+                        <div className="form-group">
+                            <label>Page ID (opcional)</label>
+                            <input
+                                type="text"
+                                value={formData.config.page_id || ''}
+                                onChange={(e) => updateConfigField('page_id', e.target.value)}
+                                placeholder="123456789012345"
+                            />
+                        </div>
+                    </>
+                );
+
+            case 'whatsapp':
+                return (
+                    <>
+                        <div className="form-group">
+                            <label>Access Token *</label>
+                            <input
+                                type="password"
+                                value={formData.config.access_token || ''}
+                                onChange={(e) => updateConfigField('access_token', e.target.value)}
+                                placeholder="EAAxxxxxxxxxx"
+                                required
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label><Phone size={16} /> Phone Number ID *</label>
+                            <input
+                                type="text"
+                                value={formData.config.phone_number_id || ''}
+                                onChange={(e) => updateConfigField('phone_number_id', e.target.value)}
+                                placeholder="123456789012345"
+                                required
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label>Verify Token *</label>
+                            <input
+                                type="text"
+                                value={formData.config.verify_token || ''}
+                                onChange={(e) => updateConfigField('verify_token', e.target.value)}
+                                placeholder="tu_verify_token_secreto"
+                                required
+                            />
+                        </div>
+                    </>
+                );
+
+            case 'instagram':
+                return (
+                    <>
+                        <div className="form-group">
+                            <label>Access Token *</label>
+                            <input
+                                type="password"
+                                value={formData.config.access_token || ''}
+                                onChange={(e) => updateConfigField('access_token', e.target.value)}
+                                placeholder="EAAxxxxxxxxxx"
+                                required
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label>Verify Token *</label>
+                            <input
+                                type="text"
+                                value={formData.config.verify_token || ''}
+                                onChange={(e) => updateConfigField('verify_token', e.target.value)}
+                                placeholder="tu_verify_token_secreto"
+                                required
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label>Instagram Account ID (opcional)</label>
+                            <input
+                                type="text"
+                                value={formData.config.instagram_account_id || ''}
+                                onChange={(e) => updateConfigField('instagram_account_id', e.target.value)}
+                                placeholder="123456789012345"
+                            />
+                        </div>
+                    </>
+                );
+
+            case 'telegram':
+                return (
+                    <div className="form-group">
+                        <label>Bot Token *</label>
+                        <input
+                            type="password"
+                            value={formData.config.bot_token || ''}
+                            onChange={(e) => updateConfigField('bot_token', e.target.value)}
+                            placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
+                            required
+                        />
+                        <small className="form-hint">
+                            Obtén el token de @BotFather en Telegram
+                        </small>
+                    </div>
+                );
+
+            default:
+                return (
+                    <>
+                        <div className="form-group">
+                            <label>API Key / Token</label>
+                            <input
+                                type="text"
+                                value={formData.config.api_key || ''}
+                                onChange={(e) => updateConfigField('api_key', e.target.value)}
+                                placeholder="Tu API Key o Token de acceso"
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label>API Secret (opcional)</label>
+                            <input
+                                type="password"
+                                value={formData.config.api_secret || ''}
+                                onChange={(e) => updateConfigField('api_secret', e.target.value)}
+                                placeholder="API Secret si es requerido"
+                            />
+                        </div>
+                    </>
+                );
+        }
+    };
+
     return (
         <div className="modal-overlay" onClick={onClose}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -505,7 +694,7 @@ function ChannelModal({ channel, onClose, onSave }) {
                             type="text"
                             value={formData.name}
                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            placeholder="Ej: WhatsApp Principal"
+                            placeholder="Ej: Messenger Principal"
                             required
                         />
                     </div>
@@ -514,73 +703,35 @@ function ChannelModal({ channel, onClose, onSave }) {
                         <label>Tipo de Canal *</label>
                         <select
                             value={formData.type}
-                            onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                            onChange={(e) => setFormData({ ...formData, type: e.target.value, config: {} })}
+                            disabled={!!channel} // No permitir cambiar tipo al editar
                         >
-                            <option value="whatsapp">WhatsApp</option>
                             <option value="messenger">Facebook Messenger</option>
+                            <option value="whatsapp">WhatsApp</option>
                             <option value="instagram">Instagram</option>
                             <option value="telegram">Telegram</option>
-                            <option value="email">Email</option>
                         </select>
+                        {channel && (
+                            <small className="form-hint">
+                                No se puede cambiar el tipo de un canal existente
+                            </small>
+                        )}
                     </div>
 
                     <div className="config-section">
                         <h3><Key size={18} /> Configuración de API</h3>
+                        {renderConfigFields()}
 
                         <div className="form-group">
-                            <label>API Key / Token</label>
-                            <input
-                                type="text"
-                                value={formData.config.api_key}
-                                onChange={(e) => setFormData({
-                                    ...formData,
-                                    config: { ...formData.config, api_key: e.target.value }
-                                })}
-                                placeholder="Tu API Key o Token de acceso"
-                            />
-                        </div>
-
-                        <div className="form-group">
-                            <label>API Secret (opcional)</label>
-                            <input
-                                type="password"
-                                value={formData.config.api_secret}
-                                onChange={(e) => setFormData({
-                                    ...formData,
-                                    config: { ...formData.config, api_secret: e.target.value }
-                                })}
-                                placeholder="API Secret si es requerido"
-                            />
-                        </div>
-
-                        {formData.type === 'whatsapp' && (
-                            <div className="form-group">
-                                <label><Phone size={16} /> Número de Teléfono</label>
-                                <input
-                                    type="text"
-                                    value={formData.config.phone_number}
-                                    onChange={(e) => setFormData({
-                                        ...formData,
-                                        config: { ...formData.config, phone_number: e.target.value }
-                                    })}
-                                    placeholder="+1234567890"
-                                />
-                            </div>
-                        )}
-
-                        <div className="form-group">
-                            <label>Webhook URL</label>
+                            <label>Webhook URL (Solo lectura)</label>
                             <input
                                 type="url"
-                                value={formData.config.webhook_url}
-                                onChange={(e) => setFormData({
-                                    ...formData,
-                                    config: { ...formData.config, webhook_url: e.target.value }
-                                })}
-                                placeholder="https://tu-servidor.com/webhook"
+                                value={getWebhookUrl()}
+                                readOnly
+                                style={{ backgroundColor: '#f5f5f5', cursor: 'not-allowed' }}
                             />
                             <small className="form-hint">
-                                URL donde recibirás los mensajes de este canal
+                                Usa esta URL en la configuración del webhook en {formData.type}
                             </small>
                         </div>
                     </div>
@@ -594,6 +745,9 @@ function ChannelModal({ channel, onClose, onSave }) {
                             />
                             Canal Activo
                         </label>
+                        <small className="form-hint">
+                            Solo los canales activos procesarán mensajes
+                        </small>
                     </div>
 
                     <div className="modal-actions">

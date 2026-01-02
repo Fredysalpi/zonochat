@@ -6,6 +6,7 @@ import MessageBubble from './MessageBubble';
 import QuickReplies from './QuickReplies';
 import TypificationModal from './TypificationModal';
 import './ChatView.css';
+import './AvatarModal.css';
 
 function ChatView({ ticket, socket, user, onToggleContactInfo, showContactInfo }) {
     const [messages, setMessages] = useState([]);
@@ -18,9 +19,12 @@ function ChatView({ ticket, socket, user, onToggleContactInfo, showContactInfo }
     const [selectedImage, setSelectedImage] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
     const [showTypificationModal, setShowTypificationModal] = useState(false);
+    const [isContactTyping, setIsContactTyping] = useState(false);
+    const [showAvatarModal, setShowAvatarModal] = useState(false);
     const messagesEndRef = useRef(null);
     const inputRef = useRef(null);
     const fileInputRef = useRef(null);
+    const typingTimeoutRef = useRef(null);
 
     useEffect(() => {
         if (ticket) {
@@ -30,16 +34,27 @@ function ChatView({ ticket, socket, user, onToggleContactInfo, showContactInfo }
             if (socket) {
                 console.log('🚪 Uniéndose a la sala del ticket:', ticket.id);
                 socket.emit('ticket:join', ticket.id);
+                // Emitir evento de ticket abierto para limpiar notificaciones
+                socket.emit('ticket:opened', { ticketId: ticket.id });
             }
+            // Marcar mensajes como leídos
+            markMessagesAsRead();
         }
     }, [ticket?.id]);
 
     useEffect(() => {
         if (socket) {
             socket.on('message:new', (message) => {
+                console.log('🔔 Mensaje nuevo recibido por Socket.IO:', message);
+                console.log('📋 Ticket actual:', ticket?.id);
+                console.log('📋 Ticket del mensaje:', message.ticket_id);
+
                 if (message.ticket_id === ticket?.id) {
+                    console.log('✅ IDs coinciden, agregando mensaje');
                     setMessages(prev => [...prev, message]);
                     scrollToBottom();
+                } else {
+                    console.log('❌ IDs NO coinciden, mensaje ignorado');
                 }
             });
 
@@ -75,7 +90,51 @@ function ChatView({ ticket, socket, user, onToggleContactInfo, showContactInfo }
                     });
                     scrollToBottom();
                 } else {
-                    console.log('❌ IDs NO coinciden, mensaje ignorado');
+                    console.log('❌ IDs NO coinciden, mensaje del sistema ignorado');
+                }
+            });
+
+            // Listener para confirmación de lectura
+            socket.on('messages:read', (data) => {
+                console.log('👁️ Mensajes marcados como leídos:', data);
+                if (data.ticketId === ticket?.id) {
+                    console.log('✅ Actualizando mensajes a leído');
+                    setMessages(prev => {
+                        const updated = prev.map(msg => {
+                            // Marcar como leído solo los mensajes del agente
+                            if (msg.sender_type === 'agent' && msg.external_message_id) {
+                                console.log(`📝 Marcando mensaje ${msg.id} como leído`);
+                                return { ...msg, is_read: 1 };
+                            }
+                            return msg;
+                        });
+                        console.log('📨 Mensajes actualizados:', updated.filter(m => m.is_read).length, 'leídos');
+                        return updated;
+                    });
+                }
+            });
+
+            // Listener para indicador de "Escribiendo..."
+            socket.on('contact:typing', (data) => {
+                if (data.ticketId === ticket?.id) {
+                    setIsContactTyping(data.isTyping);
+
+                    // Si está escribiendo, limpiar timeout anterior
+                    if (data.isTyping) {
+                        if (typingTimeoutRef.current) {
+                            clearTimeout(typingTimeoutRef.current);
+                        }
+                        // Ocultar después de 3 segundos si no hay más eventos
+                        typingTimeoutRef.current = setTimeout(() => {
+                            setIsContactTyping(false);
+                        }, 3000);
+                    } else {
+                        // Si dejó de escribir, ocultar inmediatamente
+                        if (typingTimeoutRef.current) {
+                            clearTimeout(typingTimeoutRef.current);
+                        }
+                        setIsContactTyping(false);
+                    }
                 }
             });
 
@@ -83,6 +142,13 @@ function ChatView({ ticket, socket, user, onToggleContactInfo, showContactInfo }
                 socket.off('message:new');
                 socket.off('ticket:updated');
                 socket.off('system:message');
+                socket.off('messages:read');
+                socket.off('contact:typing');
+
+                // Limpiar timeout al desmontar
+                if (typingTimeoutRef.current) {
+                    clearTimeout(typingTimeoutRef.current);
+                }
             };
         }
     }, [socket, ticket?.id]);
@@ -104,7 +170,16 @@ function ChatView({ ticket, socket, user, onToggleContactInfo, showContactInfo }
     };
 
     const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+    };
+
+    const markMessagesAsRead = async () => {
+        try {
+            await api.put(`/messages/ticket/${ticket.id}/read-all`);
+            console.log('✅ Mensajes marcados como leídos');
+        } catch (error) {
+            console.error('Error al marcar mensajes como leídos:', error);
+        }
     };
 
     const handleStatusChange = async (newStatus) => {
@@ -261,8 +336,25 @@ function ChatView({ ticket, socket, user, onToggleContactInfo, showContactInfo }
         <div className="chat-view">
             <div className="chat-header">
                 <div className="chat-contact-info">
-                    <div className="contact-avatar-large">
-                        {ticket.contact_name?.[0] || '?'}
+                    <div
+                        className="contact-avatar-large clickable"
+                        onClick={() => ticket.contact_avatar && setShowAvatarModal(true)}
+                        style={{ cursor: ticket.contact_avatar ? 'pointer' : 'default' }}
+                    >
+                        {ticket.contact_avatar ? (
+                            <img
+                                src={ticket.contact_avatar}
+                                alt={ticket.contact_name}
+                                className="avatar-image-large"
+                                onError={(e) => {
+                                    e.target.style.display = 'none';
+                                    e.target.nextSibling.style.display = 'flex';
+                                }}
+                            />
+                        ) : null}
+                        <span className="avatar-initial-large" style={{ display: ticket.contact_avatar ? 'none' : 'flex' }}>
+                            {ticket.contact_name?.[0] || '?'}
+                        </span>
                     </div>
                     <div className="contact-details">
                         <h3>{ticket.contact_name || 'Sin nombre'}</h3>
@@ -350,6 +442,19 @@ function ChatView({ ticket, socket, user, onToggleContactInfo, showContactInfo }
                                 currentUser={user}
                             />
                         ))}
+
+                        {/* Indicador de "Escribiendo..." */}
+                        {isContactTyping && (
+                            <div className="typing-indicator">
+                                <div className="typing-bubble">
+                                    <span className="typing-dot"></span>
+                                    <span className="typing-dot"></span>
+                                    <span className="typing-dot"></span>
+                                </div>
+                                <span className="typing-text">Escribiendo...</span>
+                            </div>
+                        )}
+
                         <div ref={messagesEndRef} />
                     </>
                 )}
@@ -453,6 +558,30 @@ function ChatView({ ticket, socket, user, onToggleContactInfo, showContactInfo }
                 onSubmit={handleTypificationSubmit}
                 ticketId={ticket?.id}
             />
+
+            {/* Modal de Avatar */}
+            {showAvatarModal && ticket.contact_avatar && (
+                <div className="avatar-modal-overlay" onClick={() => setShowAvatarModal(false)}>
+                    <div className="avatar-modal-content" onClick={(e) => e.stopPropagation()}>
+                        <button
+                            className="avatar-modal-close"
+                            onClick={() => setShowAvatarModal(false)}
+                            title="Cerrar"
+                        >
+                            <X size={24} />
+                        </button>
+                        <img
+                            src={ticket.contact_avatar}
+                            alt={ticket.contact_name}
+                            className="avatar-modal-image"
+                        />
+                        <div className="avatar-modal-info">
+                            <h3>{ticket.contact_name}</h3>
+                            <p>Ticket #{ticket.ticket_number}</p>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

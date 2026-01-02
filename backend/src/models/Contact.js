@@ -5,12 +5,12 @@ class Contact {
      * Crear nuevo contacto
      */
     static async create(data) {
-        const { external_id, phone, name, email, channel } = data;
+        const { external_id, phone, name, email, channel, channel_id } = data;
 
         const [result] = await db.query(
-            `INSERT INTO contacts (external_id, phone, name, email, channel)
-             VALUES (?, ?, ?, ?, ?)`,
-            [external_id || null, phone || null, name, email || null, channel]
+            `INSERT INTO contacts (external_id, phone, name, email, channel, channel_id)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [external_id || null, phone || null, name, email || null, channel, channel_id]
         );
 
         return this.findById(result.insertId);

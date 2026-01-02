@@ -17,14 +17,14 @@
 
 /* Información del Ticket */
 .ticket-info {
-    padding: 16px;
+    padding: 6px;
     background: #f9fafb;
     border-radius: 8px;
     border-left: 4px solid #8b5cf6;
 }
 
 .ticket-number {
-    font-size: 0.75rem;
+    font-size: 0.65rem;
     color: #f6f5f8;
     font-weight: 600;
     margin: 0 0 4px 0;

@@ -6,18 +6,13 @@ yarn.lock
 # Environment variables
 .env
 .env.local
+.env.development
 .env.production
 
-# Logs
-logs/
+# Build outputs
+dist/
+build/
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# OS
-.DS_Store
-Thumbs.db
 
 # IDE
 .vscode/
@@ -26,14 +21,33 @@ Thumbs.db
 *.swo
 *~
 
-# Build
-dist/
-build/
-*.tsbuildinfo
+# OS
+.DS_Store
+Thumbs.db
 
-# Uploads
-uploads/
+# Uploads (archivos de usuarios)
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+coverage/
+.nyc_output/
+
+# Temporary files
+tmp/
 temp/
+*.tmp
 
-# Database
-*.sql.backup
+# Scripts de diagnóstico (no necesarios en producción)
+backend/diagnostic-*.js
+backend/test-*.js
+backend/check-*.js
+backend/sync-*.js
+backend/update-*.js

@@ -21,18 +21,32 @@ export function NotificationProvider({ children, socket, user }) {
         if (socket && user) {
             // Escuchar nuevos mensajes
             socket.on('message:new', (message) => {
+                console.log('🔔 Nuevo mensaje recibido en NotificationSystem:', message);
+
                 // Solo notificar si el mensaje no es del usuario actual
-                if (message.sender_id !== user.id) {
+                if (message.sender_id !== user.id && message.sender_type !== 'agent') {
+                    console.log('✅ Mensaje de cliente, agregando notificación');
                     addNotification({
-                        id: Date.now(),
+                        id: `msg-${message.id}-${Date.now()}`,
                         type: 'message',
                         title: 'Nuevo mensaje',
-                        message: `${message.sender_name || 'Cliente'}: ${message.content.substring(0, 50)}...`,
+                        message: `${message.sender_name || 'Cliente'}: ${message.content?.substring(0, 50) || 'Archivo'}...`,
                         ticketId: message.ticket_id,
-                        timestamp: new Date()
+                        timestamp: new Date(),
+                        read: false
                     });
                     playNotificationSound();
+                } else if (message.sender_id === user.id || message.sender_type === 'agent') {
+                    console.log('📤 Mensaje del agente, marcando notificaciones como leídas');
+                    // Si el agente envió un mensaje, marcar notificaciones de ese ticket como leídas
+                    clearTicketNotifications(message.ticket_id);
                 }
+            });
+
+            // Escuchar cuando se abre un ticket
+            socket.on('ticket:opened', (data) => {
+                console.log('👁️ Ticket abierto:', data.ticketId);
+                clearTicketNotifications(data.ticketId);
             });
 
             // Escuchar tickets asignados
@@ -65,12 +79,28 @@ export function NotificationProvider({ children, socket, user }) {
                 socket.off('message:new');
                 socket.off('ticket:assigned');
                 socket.off('ticket:transferred_in');
+                socket.off('ticket:opened');
             };
         }
     }, [socket, user]);
 
     const addNotification = (notification) => {
-        setNotifications(prev => [notification, ...prev].slice(0, 20)); // Mantener solo las últimas 20
+        const newNotification = { ...notification, read: false };
+        setNotifications(prev => {
+            // Evitar duplicados basados en ticket_id y timestamp
+            const isDuplicate = prev.some(n =>
+                n.ticketId === notification.ticketId &&
+                Math.abs(new Date(n.timestamp) - new Date(notification.timestamp)) < 1000
+            );
+
+            if (isDuplicate) {
+                return prev;
+            }
+
+            return [newNotification, ...prev].slice(0, 20); // Mantener solo las últimas 20
+        });
+
+        // Solo incrementar si no es duplicado
         setUnreadCount(prev => prev + 1);
 
         // Notificación del navegador
@@ -89,11 +119,31 @@ export function NotificationProvider({ children, socket, user }) {
         audio.play().catch(err => console.log('Error playing sound:', err));
     };
 
+    const clearTicketNotifications = (ticketId) => {
+        console.log(`🧹 Limpiando notificaciones del ticket ${ticketId}`);
+        setNotifications(prev => {
+            const ticketNotifications = prev.filter(n => n.ticketId === ticketId && !n.read);
+            const count = ticketNotifications.length;
+
+            if (count > 0) {
+                console.log(`📉 Decrementando contador en ${count}`);
+                setUnreadCount(current => Math.max(0, current - count));
+            }
+
+            return prev.map(n =>
+                n.ticketId === ticketId ? { ...n, read: true } : n
+            );
+        });
+    };
+
     const markAsRead = (id) => {
-        setNotifications(prev =>
-            prev.map(n => n.id === id ? { ...n, read: true } : n)
-        );
-        setUnreadCount(prev => Math.max(0, prev - 1));
+        setNotifications(prev => {
+            const notification = prev.find(n => n.id === id);
+            if (notification && !notification.read) {
+                setUnreadCount(count => Math.max(0, count - 1));
+            }
+            return prev.map(n => n.id === id ? { ...n, read: true } : n);
+        });
     };
 
     const markAllAsRead = () => {

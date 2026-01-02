@@ -90,31 +90,25 @@ const getAgents = async (req, res) => {
     }
 };
 
-// Obtener tickets en holding (sin asignar)
+// Obtener tickets en holding (sin asignar) agrupados por canal
 const getHoldingTickets = async (req, res) => {
     try {
-        const [tickets] = await db.query(`
+        // Obtener tickets agrupados por canal
+        const [channelGroups] = await db.query(`
             SELECT 
-                t.id,
-                t.ticket_number,
-                t.subject,
-                t.status,
-                t.priority,
-                t.created_at,
-                t.updated_at,
-                c.id as contact_id,
-                c.name as contact_name,
-                c.phone as contact_phone,
-                c.email as contact_email,
-                ch.type as channel_type
+                ch.id as channel_id,
+                ch.name as channel_name,
+                ch.type as channel_type,
+                COUNT(t.id) as ticket_count,
+                MIN(t.created_at) as oldest_ticket_at
             FROM tickets t
-            LEFT JOIN contacts c ON t.contact_id = c.id
             LEFT JOIN channels ch ON t.channel_id = ch.id
             WHERE t.assigned_to IS NULL AND t.status = 'open'
-            ORDER BY t.created_at ASC
+            GROUP BY ch.id, ch.name, ch.type
+            ORDER BY oldest_ticket_at ASC
         `);
 
-        res.json({ tickets });
+        res.json({ channels: channelGroups });
     } catch (error) {
         console.error('Error al obtener tickets en holding:', error);
         res.status(500).json({ error: 'Error al obtener tickets en holding' });

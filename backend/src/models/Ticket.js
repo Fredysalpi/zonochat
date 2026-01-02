@@ -230,6 +230,21 @@ class Ticket {
     }
 
     /**
+     * Buscar ticket activo por contacto
+     */
+    static async findActiveByContact(contactId) {
+        const [rows] = await db.query(
+            `SELECT * FROM tickets 
+             WHERE contact_id = ? 
+             AND status IN ('open', 'in_progress', 'pending')
+             ORDER BY created_at DESC 
+             LIMIT 1`,
+            [contactId]
+        );
+        return rows[0] || null;
+    }
+
+    /**
      * Alias para getAll (usado por el controller)
      */
     static async findAll(filters = {}, limit = 20, offset = 0) {

@@ -8,7 +8,7 @@ class Message {
         const { ticket_id, content, sender_type, sender_id, message_type, media_url, external_id } = data;
 
         const [result] = await db.query(
-            `INSERT INTO messages (ticket_id, content, sender_type, sender_id, message_type, media_url, external_id)
+            `INSERT INTO messages (ticket_id, content, sender_type, sender_id, message_type, media_url, external_message_id)
              VALUES (?, ?, ?, ?, ?, ?, ?)`,
             [ticket_id, content, sender_type, sender_id || null, message_type || 'text', media_url || null, external_id || null]
         );
@@ -48,7 +48,7 @@ class Message {
         const { is_read } = data;
 
         await db.query(
-            'UPDATE messages SET is_read = ? WHERE external_id = ?',
+            'UPDATE messages SET is_read = ? WHERE external_message_id = ?',
             [is_read, externalId]
         );
 
